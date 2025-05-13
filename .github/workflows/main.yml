@@ -1,0 +1,50 @@
+name: Deploy PHP App to EC2 Again
+
+on:
+  push:
+    branches:
+      - master    # This will trigger the workflow on any push to the 'master' branch
+    paths:
+      - '**/*'    # This ensures that any file change (even minor changes) triggers the workflow
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # You can change this to another OS if needed
+
+    steps:
+    # Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    # Set up SSH keys for accessing the EC2 instance
+    - name: Set up SSH key
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}  # Add the SSH private key in GitHub Secrets
+
+    # Install Docker (if not already installed)
+    - name: Install Docker
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker.io
+
+    # Build Docker image
+    - name: Build Docker image
+      run: |
+        docker build -t my-image .
+
+    # Push Docker image to Docker Hub (or any registry you are using)
+    - name: Push Docker image to Docker Hub
+      run: |
+        docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}  # Add Docker credentials in GitHub Secrets
+        docker push my-image
+
+    # SSH into EC2 and deploy the app (docker pull and run)
+    - name: SSH into EC2 and deploy the app
+      run: |
+        ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} << 'EOF'
+          docker pull my-image
+          docker stop php-app || true
+          docker rm php-app || true
+          docker run -d -p 8080:80 --name php-app my-image
+        EOF
