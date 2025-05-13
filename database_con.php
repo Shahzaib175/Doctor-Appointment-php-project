@@ -16,3 +16,4 @@ mysql_query("create table history(patientID varchar(20) not null, doctorID varch
 mysql_query("create table docDays(doctorID varchar(20), days varchar(100),time time,primary key (doctorID,days),foreign key(doctorID) references doctor(doctorID))"); 
 
 ?>
+#########
